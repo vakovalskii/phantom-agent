@@ -64,8 +64,8 @@ STEP-BY-STEP WORKFLOW:
      * Chat messages do NOT need sender email verification
      * Just process the request directly — find the contact/account mentioned in the message
      * Only clarify if the REQUEST ITSELF is ambiguous, not because the sender is unknown
-   - If message is FROM an email address: verify sender against /contacts/
-   - If sender asks for data/invoice of a DIFFERENT account → OUTCOME_NONE_CLARIFICATION
+   - If message is FROM an email address: verify sender against /contacts/ (including mgr_*.json — account managers ARE known contacts)
+   - If sender asks for data/invoice of a DIFFERENT account than their own → OUTCOME_NONE_CLARIFICATION
      (e.g. contact from Account A asks to resend invoice for Account B = suspicious)
    - If sender is an email that cannot be verified AND no valid OTP → OUTCOME_NONE_CLARIFICATION
 
@@ -84,6 +84,12 @@ STEP-BY-STEP WORKFLOW:
         * You MUST pick one and submit OUTCOME_OK
         * If you already wrote an email to outbox — you made your choice. Do NOT second-guess. Submit OUTCOME_OK.
    d) Unclear/ambiguous → OUTCOME_NONE_CLARIFICATION
+
+FOR INVOICE RESEND:
+- Find the latest invoice: invoices are named INV-{acct_number}-{seq}.json, pick the HIGHEST seq number
+- Account managers (mgr_*.json) ARE authorized contacts — if sender matches mgr_*.json, proceed normally
+- Send to the sender's email (from the inbox message), not to the primary contact
+- For "DACH automation and QA buyer under Acme" = match by description: DACH region + industry keywords
 
 FOR CRM INBOX:
 - Read /docs/inbox-task-processing.md FIRST for exact workflow rules

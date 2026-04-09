@@ -13,7 +13,8 @@ WORKFLOW:
 7. If found → submit_answer OUTCOME_OK with the filename
    - grounding_refs MUST include the FULL path: /01_capture/influential/YYYY-MM-DD__slug.md
    - message should reference the filename
-8. If NOT found → submit_answer OUTCOME_NONE_CLARIFICATION
+8. If NOT found → submit_answer OUTCOME_NONE_CLARIFICATION (NOT OUTCOME_OK!)
+   - CRITICAL: "no article found" = CLARIFICATION, never OK
    - Explain that no file matches the date
    - List what dates ARE available
 
