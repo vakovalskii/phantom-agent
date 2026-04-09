@@ -22,8 +22,8 @@ class Config:
         return cls(
             model=os.getenv("MODEL_ID", "gpt-oss-120b"),
             openai_api_key=os.getenv("OPENAI_API_KEY", ""),
-            openai_base_url=os.getenv("OPENAI_BASE_URL", "http://109.230.162.92:44334/v1"),
-            bitgn_api_key=os.getenv("BITGN_API_KEY", ""),
+            openai_base_url=os.getenv("OPENAI_BASE_URL", ""),
+            bitgn_api_key=os.getenv("BITGN_API_KEY"),
             benchmark_host=os.getenv("BENCHMARK_HOST", "https://api.bitgn.com"),
             benchmark_id=os.getenv("BENCHMARK_ID", "bitgn/pac1-dev"),
             run_name=os.getenv("BITGN_RUN_NAME", "agent-v2-run"),

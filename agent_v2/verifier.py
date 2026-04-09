@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import json
+import os
 from openai import AsyncOpenAI
 
 # Kimi K2.5 via OpenRouter — cheap, smart, good at classification
 VERIFIER_MODEL = "moonshotai/kimi-k2.5"
 VERIFIER_BASE_URL = "https://openrouter.ai/api/v1"
-VERIFIER_API_KEY = ""
+VERIFIER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 
 VERIFY_PROMPT = """You are a security auditor for a file-system agent benchmark.
 
