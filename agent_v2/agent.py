@@ -106,7 +106,7 @@ async def run_task(
     hooks = LiveHooks(task_id=task_id, on_event=on_event)
 
     # Classify task — LLM first, regex fallback
-    from .skills import classify_task, get_skill_prompt
+    from .skills import classify_task
     from .skills.llm_classifier import classify_with_llm
 
     # Try LLM classification
@@ -129,7 +129,7 @@ async def run_task(
             match = regex_match
             classifier_type = "regex"
 
-    skill_prompt = get_skill_prompt(match.skill_id) if match.skill_id else None
+    recommended_skill = match.skill_id
     if match.skill_id:
         print(f"  {task_id} skill: {match.skill_id} ({match.confidence:.0%}) [{classifier_type}]")
     if on_event:
@@ -146,7 +146,7 @@ async def run_task(
         for attempt in range(max_retries):
             result = await Runner.run(
                 agent,
-                input=build_task_prompt(task_text, skill_prompt),
+                input=build_task_prompt(task_text, recommended_skill),
                 context=context,
                 max_turns=cfg.max_turns,
                 hooks=hooks,
