@@ -6,19 +6,19 @@ from .context import TaskContext
 
 
 @function_tool
-async def get_context(ctx: RunContextWrapper[TaskContext]) -> str:
-    """Get the current sandbox date/time. Call this first to know what date it is in the workspace. Returns JSON with unixTime and ISO time."""
+async def get_workspace_context(ctx: RunContextWrapper[TaskContext]) -> str:
+    """Get the current sandbox date/time and environment info. Call this first to know what date it is in the workspace. Returns JSON with unixTime and ISO time."""
     ctx.context.telemetry.tool_calls += 1
     return await ctx.context.runtime.get_context()
 
 
 @function_tool
-async def tree(
+async def list_directory_tree(
     ctx: RunContextWrapper[TaskContext],
     root: str = "/",
     level: int = 2,
 ) -> str:
-    """Show directory tree structure. Use to understand workspace layout.
+    """List directory tree structure recursively. Use to understand workspace layout before acting.
 
     Args:
         root: Root directory to start from (default "/").
@@ -65,17 +65,17 @@ async def read_file(
 
 
 @function_tool
-async def find_files(
+async def find_files_by_name(
     ctx: RunContextWrapper[TaskContext],
     name: str,
     root: str = "/",
     kind: str = "all",
     limit: int = 10,
 ) -> str:
-    """Find files by name pattern.
+    """Find files or directories matching a name pattern. Use for locating specific files.
 
     Args:
-        name: Filename pattern to search for.
+        name: Filename pattern to search for (e.g. "*.json", "acct_*").
         root: Directory to search in (default "/").
         kind: Filter type — "all", "files", or "dirs".
         limit: Maximum results (1-100).
@@ -85,17 +85,17 @@ async def find_files(
 
 
 @function_tool
-async def search(
+async def search_text(
     ctx: RunContextWrapper[TaskContext],
     pattern: str,
     root: str = "/",
     limit: int = 10,
 ) -> str:
-    """Full-text search across files (regex supported). For counting, set limit=1000.
+    """Search file contents for text or regex pattern. Use for finding data, counting occurrences, locating information.
 
     Args:
-        pattern: Search pattern (regex).
-        root: Directory to search in (default "/").
+        pattern: Search pattern (supports regex, e.g. "blacklist", "email.*@example").
+        root: File or directory to search in (default "/").
         limit: Maximum results (1-2000). Use 1000+ for counting queries.
     """
     ctx.context.telemetry.tool_calls += 1
@@ -139,14 +139,14 @@ async def delete_file(
 
 
 @function_tool
-async def make_directory(
+async def create_directory(
     ctx: RunContextWrapper[TaskContext],
     path: str,
 ) -> str:
-    """Create a new directory.
+    """Create a new directory at the specified path.
 
     Args:
-        path: Directory path to create.
+        path: Directory path to create (e.g. "/processing/new_folder").
     """
     ctx.context.telemetry.tool_calls += 1
     return await ctx.context.runtime.mkdir(path)
@@ -169,16 +169,16 @@ async def move_file(
 
 
 @function_tool
-async def report_completion(
+async def submit_answer(
     ctx: RunContextWrapper[TaskContext],
     message: str,
     outcome: str,
     grounding_refs: list[str],
 ) -> str:
-    """Submit the final answer for this task. Call this when you are done.
+    """Submit the final answer and complete the task. You MUST call this as your last action — every task MUST end with this tool call.
 
     Args:
-        message: Your answer or summary of completed work. For lookup tasks, put the exact answer here.
+        message: Your answer or summary of completed work. For lookup tasks, put the exact value here (e.g. "842", "stefan.scholz@example.com").
         outcome: One of: OUTCOME_OK, OUTCOME_DENIED_SECURITY, OUTCOME_NONE_CLARIFICATION, OUTCOME_NONE_UNSUPPORTED, OUTCOME_ERR_INTERNAL.
         grounding_refs: List of exact file paths that support your answer. Example: ["/accounts/acc_001.json", "/contacts/c_003.json"]. Must be real paths, NOT descriptions.
     """
@@ -223,17 +223,17 @@ async def get_skill_instructions(ctx: RunContextWrapper[TaskContext], skill_id: 
 
 
 ALL_TOOLS = [
-    get_context,
-    tree,
+    get_workspace_context,
+    list_directory_tree,
     list_directory,
     read_file,
-    find_files,
-    search,
+    find_files_by_name,
+    search_text,
     write_file,
     delete_file,
-    make_directory,
+    create_directory,
     move_file,
     list_skills,
     get_skill_instructions,
-    report_completion,
+    submit_answer,
 ]

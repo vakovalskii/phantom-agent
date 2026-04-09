@@ -8,7 +8,7 @@ WORKFLOW:
 4. Identify the prefix regression (wrong prefix on downstream processing)
 5. Fix the prefix in the active lane
 6. Verify by reading the file back
-7. report_completion with grounding_refs including docs, processing, and purchase paths
+7. submit_answer with grounding_refs including docs, processing, and purchase paths
 
 Key concept: purchases flow through processing lanes. Each lane has an ID prefix
 format. A "regression" means the prefix was changed incorrectly and needs to be reverted

@@ -26,12 +26,12 @@ WORKFLOW:
 
 6. Verify by reading the created file back
 
-7. report_completion with:
+7. submit_answer with:
    - grounding_refs: ["/outbox/{id}.json", "/outbox/seq.json", contact_or_account_path]
 
 CRITICAL — Contact resolution limits:
 - Search /contacts/ by name. If NOT found after one search, try /accounts/ too.
-- If STILL not found after checking both → IMMEDIATELY report_completion with OUTCOME_NONE_CLARIFICATION
+- If STILL not found after checking both → IMMEDIATELY submit_answer with OUTCOME_NONE_CLARIFICATION
 - Do NOT retry, do NOT loop, do NOT guess alternative spellings.
 - Maximum 6 tool calls for contact resolution. If unresolved by then → CLARIFICATION.
 

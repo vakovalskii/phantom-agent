@@ -58,7 +58,7 @@ FORCE_TOOL_PROMPT = """You already solved the task and produced this answer:
 {output}
 </YOUR_ANSWER>
 
-Now you MUST call report_completion tool to submit it. Do NOT produce text. Call the tool NOW.
+Now you MUST call submit_answer tool to submit it. Do NOT produce text. Call the tool NOW.
 Pick the correct outcome (OUTCOME_OK, OUTCOME_DENIED_SECURITY, OUTCOME_NONE_CLARIFICATION, OUTCOME_NONE_UNSUPPORTED) and include grounding_refs."""
 
 
@@ -144,9 +144,9 @@ async def run_task(
                 "completion_submitted": context.completion_submitted,
             })
 
-        # If agent finished without calling report_completion, re-run with force prompt
+        # If agent finished without calling submit_answer, re-run with force prompt
         if not context.completion_submitted:
-            print(f"  {task_id} [FORCE_TOOL] re-running to call report_completion")
+            print(f"  {task_id} [FORCE_TOOL] re-running to call submit_answer")
             if on_event:
                 on_event("fallback_submit", {
                     "task_id": task_id,

@@ -20,15 +20,15 @@ SEARCH STRATEGY:
 - NEVER guess — always verify by reading the actual file
 
 COUNTING RULES (for "how many" questions):
-- Use the search tool with the target pattern to find all matches
+- Use the search_text tool with the target pattern to find all matches
 - ALWAYS set limit=2000 to get all results (files can have 1000+ lines)
 - Count the number of SEARCH RESULTS returned — this is your count
 - Do NOT try to count by reading the whole file and counting mentally
-- Do NOT read the file with read_file and count lines — use search with limit=2000
-- Example: search(pattern="blacklist", root="/docs/channels/Telegram.txt", limit=2000)
+- Do NOT read the file with read_file and count lines — use search_text with limit=2000
+- Example: search_text(pattern="blacklist", root="/docs/channels/Telegram.txt", limit=2000)
   → count the returned matches = your answer
-- Double-check: the search tool tells you how many lines matched
-- If results are truncated, increase limit or search more specifically
+- Double-check: the search_text tool tells you how many lines matched
+- If results are truncated, increase limit or search_text more specifically
 
 FORMAT RULES:
 - "Return only the email" → message = ONLY the email address, nothing else
