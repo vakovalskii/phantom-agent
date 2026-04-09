@@ -173,7 +173,13 @@ async def run_task(
 
     except Exception as exc:
         print(f"  {task_id} Agent error: {exc}")
-        # Try force-tool even on error — model may have done useful work
+        if on_event:
+            on_event("fallback_submit", {
+                "task_id": task_id,
+                "message": f"Agent error: {str(exc)[:200]}",
+                "outcome": "ERROR_RECOVERY",
+            })
+        # Try force-tool even on error
         if not context.completion_submitted:
             try:
                 from .tools import submit_answer
@@ -190,8 +196,8 @@ async def run_task(
                     context=context,
                     max_turns=1,
                 )
-            except Exception:
-                pass
+            except Exception as exc2:
+                print(f"  {task_id} Force-tool also failed: {exc2}")
     finally:
         telemetry.finish()
 
