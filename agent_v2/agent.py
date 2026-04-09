@@ -17,21 +17,45 @@ from .tools import ALL_TOOLS
 
 
 # Monkey-patch: clean Harmony format garbage from tool names
-# gpt-oss-120b sometimes generates "read_file<|channel|>commentary" instead of "read_file"
+# gpt-oss-120b generates corrupted names like "read_file<|channel|>commentary" or "list_directory,json"
 import re as _re
 import agents.run_internal.tool_execution as _tool_exec
 
+# Known valid tool names for fast lookup
+_VALID_TOOLS = {
+    'get_workspace_context', 'list_directory_tree', 'list_directory', 'read_file',
+    'find_files_by_name', 'search_text', 'write_file', 'delete_file',
+    'create_directory', 'move_file', 'list_skills', 'get_skill_instructions', 'submit_answer',
+}
+
+def _clean_tool_name(name: str) -> str:
+    """Extract valid tool name from corrupted Harmony output."""
+    if name in _VALID_TOOLS:
+        return name
+    # Try removing everything after known corruption patterns
+    clean = _re.sub(r'[<,;|].*', '', name).strip()
+    if clean in _VALID_TOOLS:
+        return clean
+    # Try matching prefix against known tools
+    for valid in _VALID_TOOLS:
+        if name.startswith(valid):
+            return valid
+    return name
+
 _orig_exec_fn = _tool_exec.execute_function_tool_calls
 
-async def _patched_exec_fn(*, tool_calls, **kwargs):
-    for tc in tool_calls:
-        if hasattr(tc, 'function') and hasattr(tc.function, 'name'):
-            name = tc.function.name
-            if '<|' in name:
-                clean = _re.sub(r'<\|.*', '', name).strip()
+async def _patched_exec_fn(**kwargs):
+    tool_runs = kwargs.get('tool_runs', [])
+    for tr in tool_runs:
+        tc = getattr(tr, 'tool_call', tr)
+        func = getattr(tc, 'function', None)
+        if func and hasattr(func, 'name'):
+            name = func.name
+            clean = _clean_tool_name(name)
+            if clean != name:
                 print(f"  [HARMONY-FIX] '{name}' → '{clean}'")
-                tc.function.name = clean
-    return await _orig_exec_fn(tool_calls=tool_calls, **kwargs)
+                func.name = clean
+    return await _orig_exec_fn(**kwargs)
 
 _tool_exec.execute_function_tool_calls = _patched_exec_fn
 
