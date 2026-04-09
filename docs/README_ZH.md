@@ -49,7 +49,7 @@ PAC1 包含 43 个任务：
 ### 1. 安装依赖
 
 ```bash
-cd pac1-py
+# from repo root
 uv sync
 cd dashboard && npm install && cd ..
 ```
@@ -67,11 +67,11 @@ export BITGN_API_KEY=<你的BitGN密钥>
 
 ```bash
 # 终端 1 — 后端
-cd pac1-py
+# from repo root
 uv run python server.py
 
 # 终端 2 — 前端
-cd pac1-py/dashboard
+cd dashboard
 npm run dev
 ```
 
@@ -80,7 +80,7 @@ npm run dev
 ### 4. 无头模式（仅 CLI）
 
 ```bash
-cd pac1-py
+# from repo root
 uv run python main_v2.py
 ```
 

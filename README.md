@@ -51,7 +51,7 @@ User task → LLM Classifier (picks skill) → Agent(system_prompt + skill_promp
 ### 1. Install dependencies
 
 ```bash
-cd pac1-py
+# from repo root
 uv sync
 cd dashboard && npm install && cd ..
 ```
@@ -78,12 +78,12 @@ Optional:
 
 ```bash
 # Terminal 1 — Backend API
-cd pac1-py
+# from repo root
 uv run python server.py
 # → http://localhost:8000
 
 # Terminal 2 — Frontend
-cd pac1-py/dashboard
+cd dashboard
 npm run dev
 # → http://localhost:5173
 ```
@@ -93,14 +93,14 @@ Open the dashboard, click **Run**, watch your agent solve tasks in real-time.
 ### 4. Run headless (CLI only)
 
 ```bash
-cd pac1-py
+# from repo root
 uv run python main_v2.py
 ```
 
 ## Project Structure
 
 ```
-pac1-py/
+
 ├── server.py                 # FastAPI + SSE backend for dashboard
 ├── main_v2.py                # CLI benchmark runner
 ├── agent_v2/
@@ -157,8 +157,8 @@ Each task is classified into one of 12 skills, each with a specialized prompt:
 ### Hot-Reload
 
 All prompts are read from disk at runtime:
-- **Skill prompts**: `pac1-py/agent_v2/skills/*.md`
-- **System prompt**: `pac1-py/agent_v2/system_prompt.md`
+- **Skill prompts**: `agent_v2/skills/*.md`
+- **System prompt**: `agent_v2/system_prompt.md`
 
 Edit any `.md` file → next run picks it up automatically. No server restart needed.
 

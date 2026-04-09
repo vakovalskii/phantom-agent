@@ -49,7 +49,7 @@ PAC1 содержит 43 задачи:
 ### 1. Установка зависимостей
 
 ```bash
-cd pac1-py
+# from repo root
 uv sync
 cd dashboard && npm install && cd ..
 ```
@@ -67,11 +67,11 @@ export BITGN_API_KEY=<ключ-bitgn>
 
 ```bash
 # Терминал 1 — Бэкенд
-cd pac1-py
+# from repo root
 uv run python server.py
 
 # Терминал 2 — Фронтенд
-cd pac1-py/dashboard
+cd dashboard
 npm run dev
 ```
 
@@ -80,7 +80,7 @@ npm run dev
 ### 4. Запуск без дашборда (CLI)
 
 ```bash
-cd pac1-py
+# from repo root
 uv run python main_v2.py
 ```
 
