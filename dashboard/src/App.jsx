@@ -315,7 +315,6 @@ function SkillsView() {
 const LLM_PRESETS = [
   { name: 'gpt-oss-120b', model: 'gpt-oss-120b', baseUrl: 'http://109.230.162.92:44334/v1', apiKey: '', inputPrice: 0, outputPrice: 0 },
   { name: 'qwen3.5-35b-a3b (self-hosted)', model: 'qwen3.5-35b-a3b', baseUrl: 'https://4090-2-48.neuraldeep.tech/v1', apiKey: '', inputPrice: 0, outputPrice: 0 },
-  { name: 'kimi-k2.5 (OpenRouter)', model: 'moonshotai/kimi-k2.5', baseUrl: 'https://openrouter.ai/api/v1', apiKey: '', inputPrice: 0.38, outputPrice: 1.72 },
 ]
 
 function SettingsView({ appConfig, onConfigUpdate }) {
