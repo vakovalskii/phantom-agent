@@ -121,19 +121,32 @@ async def run_task(
         })
 
     try:
-        result = await Runner.run(
-            agent,
-            input=build_task_prompt(task_text, skill_prompt),
-            context=context,
-            max_turns=cfg.max_turns,
-            hooks=hooks,
-            run_config=RunConfig(
-                model_settings=ModelSettings(
-                    temperature=agent.model_settings.temperature if agent.model_settings else 1.0,
-                    max_tokens=4096,
+        # Retry once if model makes 0 tool calls (text-only response)
+        for attempt in range(2):
+            result = await Runner.run(
+                agent,
+                input=build_task_prompt(task_text, skill_prompt),
+                context=context,
+                max_turns=cfg.max_turns,
+                hooks=hooks,
+                run_config=RunConfig(
+                    model_settings=ModelSettings(
+                        temperature=agent.model_settings.temperature if agent.model_settings else 1.0,
+                        max_tokens=4096,
+                    ),
                 ),
-            ),
-        )
+            )
+            if telemetry.tool_calls > 0 or context.completion_submitted:
+                break
+            if attempt == 0:
+                print(f"  {task_id} [RETRY] 0 tool calls, retrying...")
+                if on_event:
+                    on_event("fallback_submit", {
+                        "task_id": task_id,
+                        "message": "Retry: model returned text without tool calls",
+                        "outcome": "RETRY",
+                    })
+                hooks.step = 0
         output = str(result.final_output)
 
         print(f"  {task_id} output: {output[:200]}")
