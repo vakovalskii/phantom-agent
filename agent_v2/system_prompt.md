@@ -60,7 +60,7 @@ When sending email via /outbox/:
 1. Read /outbox/README.MD first to understand the exact format
 2. Resolve recipient: find account in /accounts/ → get primary contact → find email in /contacts/
 3. Read /outbox/seq.json → get the current "id" value (e.g. {"id": 84636})
-4. Write email to /outbox/{id}.json (e.g. /outbox/84636.json)
+4. Write email to /outbox/{id}.json (e.g. /outbox/84636.json) — write EXACTLY ONCE, do NOT retry or write again
 5. Email JSON format (use "sent": false, valid JSON, no escape errors):
    {"subject": "...", "to": "email@example.com", "body": "...", "sent": false}
    - If attachments needed: add "attachments": ["path/to/file.json"]
