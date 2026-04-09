@@ -440,6 +440,8 @@ export default function App() {
   const [starting, setStarting] = useState(false)
   const [taskFilter, setTaskFilter] = useState('')
   const [concurrency, setConcurrency] = useState(5)
+  const [repeatCount, setRepeatCount] = useState(1)
+  const [repeatRemaining, setRepeatRemaining] = useState(0)
   const [tab, setTab] = useState('run') // 'run' | 'compare' | 'skills' | 'settings'
   const [compareIds, setCompareIds] = useState([])
   const [appConfig, setAppConfig] = useState(null)
@@ -479,11 +481,40 @@ export default function App() {
     return()=>{es.close();esRef.current=null}
   },[activeRunId])
 
-  const startRun = useCallback(async()=>{
-    setStarting(true);setEvents([]);setExpandedTask(null);setActiveRun(null);setTab('run')
+  const launchOneRun = useCallback(async()=>{
+    setEvents([]);setExpandedTask(null);setActiveRun(null);setTab('run')
     const filter=taskFilter.trim()?taskFilter.trim().split(/[\s,]+/):null
-    try{const r=await fetch('/api/runs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task_filter:filter,concurrency})});const d=await r.json();setActiveRunId(d.run_id)}finally{setStarting(false)}
+    const r=await fetch('/api/runs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task_filter:filter,concurrency})})
+    const d=await r.json()
+    setActiveRunId(d.run_id)
+    return d.run_id
   },[taskFilter,concurrency])
+
+  const startRun = useCallback(async()=>{
+    setStarting(true)
+    const total = repeatCount
+    setRepeatRemaining(total)
+    try {
+      for (let i = 0; i < total; i++) {
+        setRepeatRemaining(total - i)
+        const runId = await launchOneRun()
+        if (total > 1) {
+          // Wait for run to finish before starting next
+          await new Promise(resolve => {
+            const poll = setInterval(async () => {
+              try {
+                const r = await fetch(`/api/runs/${runId}`).then(r=>r.json())
+                if (r.status === 'done' || r.status === 'error') {
+                  clearInterval(poll)
+                  resolve()
+                }
+              } catch { clearInterval(poll); resolve() }
+            }, 5000)
+          })
+        }
+      }
+    } finally { setStarting(false); setRepeatRemaining(0) }
+  },[launchOneRun, repeatCount])
 
   const toggleCompare = useCallback((rid)=>{
     setCompareIds(prev=>prev.includes(rid)?prev.filter(x=>x!==rid):[...prev,rid])
@@ -554,8 +585,12 @@ export default function App() {
                 <input type="range" min="1" max="30" value={concurrency} onChange={e=>setConcurrency(Number(e.target.value))} className="w-20 h-1.5 accent-cyan-500"/>
                 <input type="number" min="1" max="30" value={concurrency} onChange={e=>setConcurrency(Math.min(30,Math.max(1,Number(e.target.value))))} className="w-10 bg-transparent text-xs font-mono text-cyan-400 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"/>
               </div>
+              <div className="flex items-center gap-2 bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-1.5">
+                <label className="text-[10px] text-slate-500">Repeat</label>
+                <input type="number" min="1" max="50" value={repeatCount} onChange={e=>setRepeatCount(Math.min(50,Math.max(1,Number(e.target.value))))} className="w-10 bg-transparent text-xs font-mono text-purple-400 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"/>
+              </div>
               {(activeRun?.status==='running'||runs.some(r=>r.run_id===activeRunId&&r.status==='running'))&&<button onClick={()=>fetch(`/api/runs/${activeRunId}/stop`,{method:'POST'}).then(()=>setActiveRun(p=>p?{...p,status:'error'}:p))} className="bg-red-600 hover:bg-red-500 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all">Stop</button>}
-              <button onClick={startRun} disabled={starting} className="bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:text-slate-500 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all">{starting?'Starting...':'Run'}</button>
+              <button onClick={startRun} disabled={starting} className="bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:text-slate-500 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all">{starting?(repeatRemaining>1?`Run ${repeatCount-repeatRemaining+1}/${repeatCount}...`:'Running...'):'Run'}</button>
             </div>
           </div>
         </header>
