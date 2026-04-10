@@ -443,6 +443,7 @@ export default function App() {
   const [repeatCount, setRepeatCount] = useState(1)
   const [repeatRemaining, setRepeatRemaining] = useState(0)
   const [stopOnFail, setStopOnFail] = useState(false)
+  const [autoSubmit, setAutoSubmit] = useState(true)
   const [tab, setTab] = useState('run') // 'run' | 'compare' | 'skills' | 'settings'
   const [compareIds, setCompareIds] = useState([])
   const [appConfig, setAppConfig] = useState(null)
@@ -485,7 +486,7 @@ export default function App() {
   const launchOneRun = useCallback(async()=>{
     setEvents([]);setExpandedTask(null);setActiveRun(null);setTab('run')
     const filter=taskFilter.trim()?taskFilter.trim().split(/[\s,]+/):null
-    const r=await fetch('/api/runs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task_filter:filter,concurrency,stop_on_fail:stopOnFail})})
+    const r=await fetch('/api/runs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task_filter:filter,concurrency,stop_on_fail:stopOnFail,auto_submit:autoSubmit})})
     const d=await r.json()
     setActiveRunId(d.run_id)
     return d.run_id
@@ -593,7 +594,12 @@ export default function App() {
                   <input type="checkbox" checked={stopOnFail} onChange={e=>setStopOnFail(e.target.checked)} className="w-3 h-3 accent-red-500"/>
                   <span className="text-[10px] text-slate-500">Fail→Next</span>
                 </label>
+                <label className="flex items-center gap-1 cursor-pointer" title="Auto-submit to leaderboard on completion">
+                  <input type="checkbox" checked={autoSubmit} onChange={e=>setAutoSubmit(e.target.checked)} className="w-3 h-3 accent-emerald-500"/>
+                  <span className="text-[10px] text-slate-500">Submit</span>
+                </label>
               </div>
+              {activeRun?.status==='done'&&!autoSubmit&&<button onClick={()=>fetch(`/api/runs/${activeRunId}/submit`,{method:'POST'}).then(r=>r.json()).then(d=>d.error?alert(d.error):alert(`Submitted! Score: ${d.score?.toFixed(1)}%`))} className="bg-emerald-600 hover:bg-emerald-500 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all">Submit</button>}
               {(activeRun?.status==='running'||runs.some(r=>r.run_id===activeRunId&&r.status==='running'))&&<button onClick={()=>fetch(`/api/runs/${activeRunId}/stop`,{method:'POST'}).then(()=>setActiveRun(p=>p?{...p,status:'error'}:p))} className="bg-red-600 hover:bg-red-500 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all">Stop</button>}
               <button onClick={startRun} disabled={starting} className="bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:text-slate-500 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all">{starting?(repeatRemaining>1?`Run ${repeatCount-repeatRemaining+1}/${repeatCount}...`:'Running...'):'Run'}</button>
             </div>
