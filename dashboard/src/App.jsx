@@ -550,15 +550,15 @@ export default function App() {
       <RunSidebar runs={runs} activeRunId={activeRunId} onSelect={(id)=>{setActiveRunId(id);setTab('run')}} compareIds={compareIds} onToggleCompare={toggleCompare} onDelete={deleteRun}/>
       <div className="flex-1 flex flex-col min-w-0">
         <header className="border-b border-slate-800/50 bg-slate-900/30 backdrop-blur-xl sticky top-0 z-20">
-          <div className="px-6 py-3 flex items-center justify-between">
+          {/* Row 1: Logo + Tabs + Model */}
+          <div className="px-6 pt-2.5 pb-1.5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm">P1</div>
+              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs">P1</div>
               <div>
-                <h1 className="text-sm font-semibold text-white leading-none">PAC1 Agent Dashboard</h1>
-                <p className="text-[10px] text-slate-600">{activeRunId?<span>Run: <span className="text-cyan-500 font-mono">{activeRunId}</span></span>:'OpenAI Agents SDK + Skills'}{appConfig&&<span className="ml-2 text-slate-600">{appConfig.model}</span>}</p>
+                <h1 className="text-xs font-semibold text-white leading-none">PAC1 Agent Dashboard</h1>
+                <p className="text-[9px] text-slate-600 mt-0.5">{activeRunId?<span>Run: <span className="text-cyan-500 font-mono">{activeRunId}</span></span>:'OpenAI Agents SDK'}{appConfig&&<span className="ml-2">{appConfig.model}</span>}</p>
               </div>
-              {/* Tabs */}
-              <div className="flex gap-1 ml-4">
+              <div className="flex gap-1 ml-3">
                 <button onClick={()=>setTab('run')} className={`text-[10px] px-3 py-1 rounded ${tab==='run'?'bg-cyan-900/50 text-cyan-400':'text-slate-600 hover:text-slate-400'}`}>Run</button>
                 <button onClick={()=>setTab('compare')} className={`text-[10px] px-3 py-1 rounded ${tab==='compare'?'bg-purple-900/50 text-purple-400':'text-slate-600 hover:text-slate-400'}`}>Compare {compareIds.length>0&&`(${compareIds.length})`}</button>
                 <button onClick={()=>{setCompareIds(runs.map(r=>r.run_id));setTab('compare')}} className="text-[10px] px-2 py-1 rounded text-slate-600 hover:text-purple-400">All</button>
@@ -566,43 +566,47 @@ export default function App() {
                 <button onClick={()=>setTab('settings')} className={`text-[10px] px-3 py-1 rounded ${tab==='settings'?'bg-amber-900/50 text-amber-400':'text-slate-600 hover:text-slate-400'}`}>Settings</button>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <select value={appConfig?.model||''} onChange={e=>{
-                const name=e.target.value
-                const preset=LLM_PRESETS.find(p=>p.model===name)
-                if(preset){
-                  fetch('/api/config/llm',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:preset.model,openai_base_url:preset.baseUrl,openai_api_key:preset.apiKey})}).then(r=>r.json()).then(d=>setAppConfig(p=>({...p,model:d.model,openai_base_url:d.openai_base_url,openai_api_key:d.openai_api_key})))
-                }
-              }} className="bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-cyan-400 focus:outline-none focus:border-cyan-500/50 cursor-pointer">
-                {LLM_PRESETS.map(p=><option key={p.model} value={p.model}>{p.name}</option>)}
-              </select>
-              <input className="bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-slate-300 placeholder-slate-600 w-40 focus:outline-none focus:border-cyan-500/50" placeholder="t01 t02... or all" value={taskFilter} onChange={e=>setTaskFilter(e.target.value)}/>
-              <div className="flex items-center gap-2 bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-1.5">
-                <label className="text-[10px] text-slate-500">Temp</label>
-                <input type="range" min="0" max="2" step="0.1" value={appConfig?.temperature??1} onChange={e=>{const t=Number(e.target.value);setAppConfig(p=>({...p,temperature:t}));fetch('/api/config/temperature',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({temperature:t})})}} className="w-20 h-1.5 accent-amber-500"/>
-                <input type="number" min="0" max="2" step="0.1" value={appConfig?.temperature??1} onChange={e=>{const t=Math.min(2,Math.max(0,Number(e.target.value)));setAppConfig(p=>({...p,temperature:t}));fetch('/api/config/temperature',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({temperature:t})})}} className="w-12 bg-transparent text-xs font-mono text-amber-400 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"/>
-              </div>
-              <div className="flex items-center gap-2 bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-1.5">
-                <label className="text-[10px] text-slate-500">Agents</label>
-                <input type="range" min="1" max="30" value={concurrency} onChange={e=>setConcurrency(Number(e.target.value))} className="w-20 h-1.5 accent-cyan-500"/>
-                <input type="number" min="1" max="30" value={concurrency} onChange={e=>setConcurrency(Math.min(30,Math.max(1,Number(e.target.value))))} className="w-10 bg-transparent text-xs font-mono text-cyan-400 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"/>
-              </div>
-              <div className="flex items-center gap-2 bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-1.5">
-                <label className="text-[10px] text-slate-500">Repeat</label>
-                <input type="number" min="1" max="50" value={repeatCount} onChange={e=>setRepeatCount(Math.min(50,Math.max(1,Number(e.target.value))))} className="w-10 bg-transparent text-xs font-mono text-purple-400 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"/>
-                <label className="flex items-center gap-1 cursor-pointer" title="Stop run on first task failure and start next">
-                  <input type="checkbox" checked={stopOnFail} onChange={e=>setStopOnFail(e.target.checked)} className="w-3 h-3 accent-red-500"/>
-                  <span className="text-[10px] text-slate-500">Fail→Next</span>
-                </label>
-                <label className="flex items-center gap-1 cursor-pointer" title="Auto-submit to leaderboard on completion">
-                  <input type="checkbox" checked={autoSubmit} onChange={e=>setAutoSubmit(e.target.checked)} className="w-3 h-3 accent-emerald-500"/>
-                  <span className="text-[10px] text-slate-500">Submit</span>
-                </label>
-              </div>
-              {activeRun?.status==='done'&&!autoSubmit&&<button onClick={()=>fetch(`/api/runs/${activeRunId}/submit`,{method:'POST'}).then(r=>r.json()).then(d=>d.error?alert(d.error):alert(`Submitted! Score: ${d.score?.toFixed(1)}%`))} className="bg-emerald-600 hover:bg-emerald-500 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all">Submit</button>}
-              {(activeRun?.status==='running'||runs.some(r=>r.run_id===activeRunId&&r.status==='running'))&&<button onClick={()=>fetch(`/api/runs/${activeRunId}/stop`,{method:'POST'}).then(()=>setActiveRun(p=>p?{...p,status:'error'}:p))} className="bg-red-600 hover:bg-red-500 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all">Stop</button>}
-              <button onClick={startRun} disabled={starting} className="bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:text-slate-500 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all">{starting?(repeatRemaining>1?`Run ${repeatCount-repeatRemaining+1}/${repeatCount}...`:'Running...'):'Run'}</button>
+            <select value={appConfig?.model||''} onChange={e=>{
+              const name=e.target.value
+              const preset=LLM_PRESETS.find(p=>p.model===name)
+              if(preset){
+                fetch('/api/config/llm',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:preset.model,openai_base_url:preset.baseUrl,openai_api_key:preset.apiKey})}).then(r=>r.json()).then(d=>setAppConfig(p=>({...p,model:d.model,openai_base_url:d.openai_base_url,openai_api_key:d.openai_api_key})))
+              }
+            }} className="bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-1 text-xs text-cyan-400 focus:outline-none focus:border-cyan-500/50 cursor-pointer">
+              {LLM_PRESETS.map(p=><option key={p.model} value={p.model}>{p.name}</option>)}
+            </select>
+          </div>
+          {/* Row 2: Controls */}
+          <div className="px-6 pb-2.5 flex items-center gap-2.5">
+            <input className="bg-slate-800/50 border border-slate-700/50 rounded-lg px-2.5 py-1 text-xs text-slate-300 placeholder-slate-600 w-32 focus:outline-none focus:border-cyan-500/50" placeholder="t01 t02... or all" value={taskFilter} onChange={e=>setTaskFilter(e.target.value)}/>
+            <div className="flex items-center gap-1.5 bg-slate-800/50 border border-slate-700/50 rounded-lg px-2.5 py-1">
+              <label className="text-[9px] text-slate-500">Temp</label>
+              <input type="range" min="0" max="2" step="0.1" value={appConfig?.temperature??1} onChange={e=>{const t=Number(e.target.value);setAppConfig(p=>({...p,temperature:t}));fetch('/api/config/temperature',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({temperature:t})})}} className="w-16 h-1 accent-amber-500"/>
+              <input type="number" min="0" max="2" step="0.1" value={appConfig?.temperature??1} onChange={e=>{const t=Math.min(2,Math.max(0,Number(e.target.value)));setAppConfig(p=>({...p,temperature:t}));fetch('/api/config/temperature',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({temperature:t})})}} className="w-10 bg-transparent text-[11px] font-mono text-amber-400 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"/>
             </div>
+            <div className="flex items-center gap-1.5 bg-slate-800/50 border border-slate-700/50 rounded-lg px-2.5 py-1">
+              <label className="text-[9px] text-slate-500">Agents</label>
+              <input type="range" min="1" max="30" value={concurrency} onChange={e=>setConcurrency(Number(e.target.value))} className="w-16 h-1 accent-cyan-500"/>
+              <input type="number" min="1" max="30" value={concurrency} onChange={e=>setConcurrency(Math.min(30,Math.max(1,Number(e.target.value))))} className="w-8 bg-transparent text-[11px] font-mono text-cyan-400 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"/>
+            </div>
+            <div className="flex items-center gap-1.5 bg-slate-800/50 border border-slate-700/50 rounded-lg px-2.5 py-1">
+              <label className="text-[9px] text-slate-500">Repeat</label>
+              <input type="number" min="1" max="50" value={repeatCount} onChange={e=>setRepeatCount(Math.min(50,Math.max(1,Number(e.target.value))))} className="w-8 bg-transparent text-[11px] font-mono text-purple-400 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"/>
+            </div>
+            <div className="flex items-center gap-2.5 bg-slate-800/50 border border-slate-700/50 rounded-lg px-2.5 py-1">
+              <label className="flex items-center gap-1 cursor-pointer" title="Stop on first fail, start next">
+                <input type="checkbox" checked={stopOnFail} onChange={e=>setStopOnFail(e.target.checked)} className="w-3 h-3 accent-red-500"/>
+                <span className="text-[9px] text-slate-500">Fail→Next</span>
+              </label>
+              <label className="flex items-center gap-1 cursor-pointer" title="Auto-submit to leaderboard">
+                <input type="checkbox" checked={autoSubmit} onChange={e=>setAutoSubmit(e.target.checked)} className="w-3 h-3 accent-emerald-500"/>
+                <span className="text-[9px] text-slate-500">Submit</span>
+              </label>
+            </div>
+            <div className="flex-1"/>
+            {activeRun?.status==='done'&&!autoSubmit&&<button onClick={()=>fetch(`/api/runs/${activeRunId}/submit`,{method:'POST'}).then(r=>r.json()).then(d=>d.error?alert(d.error):alert(`Submitted! Score: ${d.score?.toFixed(1)}%`))} className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1 rounded-lg text-[11px] font-semibold text-white transition-all">Submit</button>}
+            {(activeRun?.status==='running'||runs.some(r=>r.run_id===activeRunId&&r.status==='running'))&&<button onClick={()=>fetch(`/api/runs/${activeRunId}/stop`,{method:'POST'}).then(()=>setActiveRun(p=>p?{...p,status:'error'}:p))} className="bg-red-600 hover:bg-red-500 px-3 py-1 rounded-lg text-[11px] font-semibold text-white transition-all">Stop</button>}
+            <button onClick={startRun} disabled={starting} className="bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:text-slate-500 px-4 py-1 rounded-lg text-[11px] font-semibold text-white transition-all">{starting?(repeatRemaining>1?`Run ${repeatCount-repeatRemaining+1}/${repeatCount}...`:'Running...'):'Run'}</button>
           </div>
         </header>
 
