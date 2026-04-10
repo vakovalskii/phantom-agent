@@ -281,23 +281,25 @@ async def _run_benchmark_async(run_id: str, task_filter: list[str] | None = None
             "model": cfg.model,
         })
 
-        # Sliding window: semaphore limits concurrency, all tasks launched at once.
+        # Sliding window with optional early stop on fail
         semaphore = asyncio.Semaphore(concurrency)
-        cancel_event = asyncio.Event()
+        failed = False
 
         async def _guarded(tid: str, trid: str | None) -> None:
-            if cancel_event.is_set():
+            nonlocal failed
+            if failed and stop_on_fail:
+                run.tasks[tid].status = "pending"
                 return
             async with semaphore:
-                if cancel_event.is_set():
+                if failed and stop_on_fail:
+                    run.tasks[tid].status = "pending"
                     return
                 await _run_single(
                     cfg, agent, harness, run_id, tid, trid,
                     cfg.benchmark_id, run.tasks[tid],
                 )
-                # Check for early stop on fail
                 if stop_on_fail and run.tasks[tid].score == 0.0 and run.tasks[tid].status == "done":
-                    cancel_event.set()
+                    failed = True
                     emitter("run_early_stop", {"task_id": tid, "reason": "stop_on_fail"})
 
         await asyncio.gather(*[_guarded(tid, trid) for tid, trid in tasks])
@@ -307,7 +309,7 @@ async def _run_benchmark_async(run_id: str, task_filter: list[str] | None = None
         run.finished_at = time.time()
         run.status = RunStatus.DONE
 
-        if run.leaderboard_run_id:
+        if run.leaderboard_run_id and not cancel_event.is_set():
             await asyncio.to_thread(
                 harness.submit_run, SubmitRunRequest(run_id=run.leaderboard_run_id)
             )
