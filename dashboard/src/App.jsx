@@ -18,8 +18,9 @@ function SkillBadge({ skillId }) {
   if (!skillId) return null
   return <span className={`text-[10px] px-2 py-0.5 rounded-full border ${SKILL_COLORS[skillId] || 'bg-slate-800 text-slate-400'}`}>{skillId.replace(/_/g, ' ')}</span>
 }
-function ScoreBadge({ score }) {
+function ScoreBadge({ score, blind }) {
   if (score < 0) return <span className="text-slate-600 text-xs">--</span>
+  if (blind) return <span className="bg-slate-700/50 text-slate-400 text-xs font-bold px-2 py-0.5 rounded">DONE</span>
   if (score === 1) return <span className="bg-emerald-500/20 text-emerald-400 text-xs font-bold px-2 py-0.5 rounded">PASS</span>
   return <span className="bg-red-500/20 text-red-400 text-xs font-bold px-2 py-0.5 rounded">FAIL</span>
 }
@@ -80,9 +81,9 @@ function TaskPanel({ task, events, runId }) {
     </div>
   )
 }
-function TaskRow({ task, isExpanded, onToggle }) {
+function TaskRow({ task, isExpanded, onToggle, blind }) {
   return (<div className={`grid grid-cols-[32px_52px_1fr_110px_60px_60px_64px_64px] gap-2 px-4 py-2 hover:bg-slate-800/40 cursor-pointer items-center text-sm transition ${isExpanded?'bg-slate-800/30':''}`} onClick={onToggle}>
-    <span><StatusIndicator status={task.status}/></span><span className="font-mono text-slate-400 text-xs">{task.task_id}</span><span className="truncate text-slate-500 text-xs">{task.instruction||'...'}</span><span>{task.skill_id?<SkillBadge skillId={task.skill_id}/>:<span className="text-[10px] text-slate-700">—</span>}</span><span><ScoreBadge score={task.score}/></span><span className="text-slate-600 text-xs text-center">{task.tool_calls>0?task.tool_calls:''}</span><span className="text-slate-600 text-xs text-right">{task.total_tokens>0?`${(task.total_tokens/1000).toFixed(1)}k`:''}</span><span className="text-slate-600 text-xs text-right">{task.wall_time_ms>0?`${(task.wall_time_ms/1000).toFixed(1)}s`:''}</span>
+    <span><StatusIndicator status={task.status}/></span><span className="font-mono text-slate-400 text-xs">{task.task_id}</span><span className="truncate text-slate-500 text-xs">{task.instruction||'...'}</span><span>{task.skill_id?<SkillBadge skillId={task.skill_id}/>:<span className="text-[10px] text-slate-700">—</span>}</span><span><ScoreBadge score={task.score} blind={blind}/></span><span className="text-slate-600 text-xs text-center">{task.tool_calls>0?task.tool_calls:''}</span><span className="text-slate-600 text-xs text-right">{task.total_tokens>0?`${(task.total_tokens/1000).toFixed(1)}k`:''}</span><span className="text-slate-600 text-xs text-right">{task.wall_time_ms>0?`${(task.wall_time_ms/1000).toFixed(1)}s`:''}</span>
   </div>)
 }
 function ProgressBar({ passed, failed, total }) {
@@ -124,6 +125,8 @@ function RunSidebar({ runs, activeRunId, onSelect, compareIds, onToggleCompare, 
                 <span className={`font-mono text-xs ${isActive?'text-cyan-400 font-bold':'text-slate-300'}`}>{r.run_id}</span>
                 <div className="flex items-center gap-1" onClick={e=>e.stopPropagation()}>
                   <input type="checkbox" checked={isCompare} onChange={()=>onToggleCompare(r.run_id)} className="w-3 h-3 accent-purple-500" title="Compare"/>
+                  {r.submitted&&<span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-blue-900/50 text-blue-400" title={`Submitted: ${r.leaderboard_run_id||''}`}>LB</span>}
+                  {r.leaderboard_run_id&&!r.submitted&&<span className="text-[10px] px-1 py-0.5 rounded-full text-slate-600" title="Has leaderboard ID, not submitted">○</span>}
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${r.status==='done'?'bg-emerald-900/50 text-emerald-400':r.status==='running'?'bg-amber-900/50 text-amber-400':r.status==='error'?'bg-red-900/50 text-red-400':'bg-slate-800 text-slate-500'}`}>{r.status}</span>
                   {r.status!=='running'&&<button onClick={e=>{e.stopPropagation();onDelete(r.run_id)}} className="text-slate-700 hover:text-red-400 text-xs ml-0.5" title="Delete">x</button>}
                 </div>
@@ -490,7 +493,7 @@ export default function App() {
     const d=await r.json()
     setActiveRunId(d.run_id)
     return d.run_id
-  },[taskFilter,concurrency,stopOnFail])
+  },[taskFilter,concurrency,stopOnFail,autoSubmit])
 
   const startRun = useCallback(async()=>{
     setStarting(true)
@@ -529,7 +532,8 @@ export default function App() {
   },[activeRunId])
 
   const sortedTasks=activeRun?Object.values(activeRun.tasks).sort((a,b)=>a.task_id.localeCompare(b.task_id,undefined,{numeric:true})):[]
-  const scored=sortedTasks.filter(t=>t.score>=0), passed=scored.filter(t=>t.score===1).length, failed=scored.filter(t=>t.score===0).length, running=sortedTasks.filter(t=>t.status==='running').length
+  const blind=appConfig?.benchmark_id?.includes('prod')
+  const scored=sortedTasks.filter(t=>t.score>=0), passed=blind?scored.length:scored.filter(t=>t.score===1).length, failed=blind?0:scored.filter(t=>t.score===0).length, running=sortedTasks.filter(t=>t.status==='running').length
 
   // Cost calculation
   const runCost = (() => {
@@ -575,38 +579,45 @@ export default function App() {
             }} className="bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-1 text-xs text-cyan-400 focus:outline-none focus:border-cyan-500/50 cursor-pointer">
               {LLM_PRESETS.map(p=><option key={p.model} value={p.model}>{p.name}</option>)}
             </select>
+            <select value={appConfig?.benchmark_id||'bitgn/pac1-dev'} onChange={e=>{
+              const bid=e.target.value
+              fetch('/api/config/benchmark',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({benchmark_id:bid})}).then(r=>r.json()).then(()=>setAppConfig(p=>({...p,benchmark_id:bid})))
+            }} className="bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-1 text-xs text-amber-400 focus:outline-none focus:border-amber-500/50 cursor-pointer">
+              <option value="bitgn/pac1-dev">PAC1 DEV</option>
+              <option value="bitgn/pac1-prod">PAC1 PROD</option>
+            </select>
           </div>
           {/* Row 2: Controls */}
-          <div className="px-6 pb-2.5 flex items-center gap-2.5">
-            <input className="bg-slate-800/50 border border-slate-700/50 rounded-lg px-2.5 py-1 text-xs text-slate-300 placeholder-slate-600 w-32 focus:outline-none focus:border-cyan-500/50" placeholder="t01 t02... or all" value={taskFilter} onChange={e=>setTaskFilter(e.target.value)}/>
-            <div className="flex items-center gap-1.5 bg-slate-800/50 border border-slate-700/50 rounded-lg px-2.5 py-1">
-              <label className="text-[9px] text-slate-500">Temp</label>
-              <input type="range" min="0" max="2" step="0.1" value={appConfig?.temperature??1} onChange={e=>{const t=Number(e.target.value);setAppConfig(p=>({...p,temperature:t}));fetch('/api/config/temperature',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({temperature:t})})}} className="w-16 h-1 accent-amber-500"/>
-              <input type="number" min="0" max="2" step="0.1" value={appConfig?.temperature??1} onChange={e=>{const t=Math.min(2,Math.max(0,Number(e.target.value)));setAppConfig(p=>({...p,temperature:t}));fetch('/api/config/temperature',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({temperature:t})})}} className="w-10 bg-transparent text-[11px] font-mono text-amber-400 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"/>
+          <div className="px-6 pb-3 flex items-center gap-3">
+            <input className="bg-slate-800/50 border border-slate-700/50 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 placeholder-slate-600 w-44 focus:outline-none focus:border-cyan-500/50" placeholder="t01 t02... or all" value={taskFilter} onChange={e=>setTaskFilter(e.target.value)}/>
+            <div className="flex items-center gap-2 bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-1.5">
+              <label className="text-[10px] text-slate-500">Temp</label>
+              <input type="range" min="0" max="2" step="0.1" value={appConfig?.temperature??1} onChange={e=>{const t=Number(e.target.value);setAppConfig(p=>({...p,temperature:t}));fetch('/api/config/temperature',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({temperature:t})})}} className="w-24 h-1.5 accent-amber-500"/>
+              <input type="number" min="0" max="2" step="0.1" value={appConfig?.temperature??1} onChange={e=>{const t=Math.min(2,Math.max(0,Number(e.target.value)));setAppConfig(p=>({...p,temperature:t}));fetch('/api/config/temperature',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({temperature:t})})}} className="w-12 bg-transparent text-xs font-mono text-amber-400 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"/>
             </div>
-            <div className="flex items-center gap-1.5 bg-slate-800/50 border border-slate-700/50 rounded-lg px-2.5 py-1">
-              <label className="text-[9px] text-slate-500">Agents</label>
-              <input type="range" min="1" max="30" value={concurrency} onChange={e=>setConcurrency(Number(e.target.value))} className="w-16 h-1 accent-cyan-500"/>
-              <input type="number" min="1" max="30" value={concurrency} onChange={e=>setConcurrency(Math.min(30,Math.max(1,Number(e.target.value))))} className="w-8 bg-transparent text-[11px] font-mono text-cyan-400 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"/>
+            <div className="flex items-center gap-2 bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-1.5">
+              <label className="text-[10px] text-slate-500">Agents</label>
+              <input type="range" min="1" max="30" value={concurrency} onChange={e=>setConcurrency(Number(e.target.value))} className="w-24 h-1.5 accent-cyan-500"/>
+              <input type="number" min="1" max="30" value={concurrency} onChange={e=>setConcurrency(Math.min(30,Math.max(1,Number(e.target.value))))} className="w-10 bg-transparent text-xs font-mono text-cyan-400 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"/>
             </div>
-            <div className="flex items-center gap-1.5 bg-slate-800/50 border border-slate-700/50 rounded-lg px-2.5 py-1">
-              <label className="text-[9px] text-slate-500">Repeat</label>
-              <input type="number" min="1" max="50" value={repeatCount} onChange={e=>setRepeatCount(Math.min(50,Math.max(1,Number(e.target.value))))} className="w-8 bg-transparent text-[11px] font-mono text-purple-400 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"/>
+            <div className="flex items-center gap-2 bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-1.5">
+              <label className="text-[10px] text-slate-500">Repeat</label>
+              <input type="number" min="1" max="50" value={repeatCount} onChange={e=>setRepeatCount(Math.min(50,Math.max(1,Number(e.target.value))))} className="w-10 bg-transparent text-xs font-mono text-purple-400 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"/>
             </div>
-            <div className="flex items-center gap-2.5 bg-slate-800/50 border border-slate-700/50 rounded-lg px-2.5 py-1">
-              <label className="flex items-center gap-1 cursor-pointer" title="Stop on first fail, start next">
-                <input type="checkbox" checked={stopOnFail} onChange={e=>setStopOnFail(e.target.checked)} className="w-3 h-3 accent-red-500"/>
-                <span className="text-[9px] text-slate-500">Fail→Next</span>
+            <div className="flex items-center gap-3 bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-1.5">
+              <label className="flex items-center gap-1.5 cursor-pointer" title="Stop on first fail, start next">
+                <input type="checkbox" checked={stopOnFail} onChange={e=>setStopOnFail(e.target.checked)} className="w-3.5 h-3.5 accent-red-500"/>
+                <span className="text-[10px] text-slate-500">Fail→Next</span>
               </label>
-              <label className="flex items-center gap-1 cursor-pointer" title="Auto-submit to leaderboard">
-                <input type="checkbox" checked={autoSubmit} onChange={e=>setAutoSubmit(e.target.checked)} className="w-3 h-3 accent-emerald-500"/>
-                <span className="text-[9px] text-slate-500">Submit</span>
+              <label className="flex items-center gap-1.5 cursor-pointer" title="Auto-submit to leaderboard">
+                <input type="checkbox" checked={autoSubmit} onChange={e=>setAutoSubmit(e.target.checked)} className="w-3.5 h-3.5 accent-emerald-500"/>
+                <span className="text-[10px] text-slate-500">Submit</span>
               </label>
             </div>
             <div className="flex-1"/>
-            {activeRun?.status==='done'&&!autoSubmit&&<button onClick={()=>fetch(`/api/runs/${activeRunId}/submit`,{method:'POST'}).then(r=>r.json()).then(d=>d.error?alert(d.error):alert(`Submitted! Score: ${d.score?.toFixed(1)}%`))} className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1 rounded-lg text-[11px] font-semibold text-white transition-all">Submit</button>}
-            {(activeRun?.status==='running'||runs.some(r=>r.run_id===activeRunId&&r.status==='running'))&&<button onClick={()=>fetch(`/api/runs/${activeRunId}/stop`,{method:'POST'}).then(()=>setActiveRun(p=>p?{...p,status:'error'}:p))} className="bg-red-600 hover:bg-red-500 px-3 py-1 rounded-lg text-[11px] font-semibold text-white transition-all">Stop</button>}
-            <button onClick={startRun} disabled={starting} className="bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:text-slate-500 px-4 py-1 rounded-lg text-[11px] font-semibold text-white transition-all">{starting?(repeatRemaining>1?`Run ${repeatCount-repeatRemaining+1}/${repeatCount}...`:'Running...'):'Run'}</button>
+            {activeRun?.status==='done'&&!autoSubmit&&<button onClick={()=>fetch(`/api/runs/${activeRunId}/submit`,{method:'POST'}).then(r=>r.json()).then(d=>d.error?alert(d.error):alert(`Submitted! Score: ${d.score?.toFixed(1)}%`))} className="bg-emerald-600 hover:bg-emerald-500 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all">Submit</button>}
+            {(activeRun?.status==='running'||runs.some(r=>r.run_id===activeRunId&&r.status==='running'))&&<button onClick={()=>fetch(`/api/runs/${activeRunId}/stop`,{method:'POST'}).then(()=>setActiveRun(p=>p?{...p,status:'error'}:p))} className="bg-red-600 hover:bg-red-500 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all">Stop</button>}
+            <button onClick={startRun} disabled={starting} className="bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:text-slate-500 px-5 py-1.5 rounded-lg text-xs font-semibold text-white transition-all">{starting?(repeatRemaining>1?`Run ${repeatCount-repeatRemaining+1}/${repeatCount}...`:'Running...'):'Run'}</button>
           </div>
         </header>
 
@@ -634,13 +645,16 @@ export default function App() {
                 {activeRun.status === 'running' && activeRun.started_at && <span className="text-[10px] text-amber-400 ml-auto animate-pulse">Running...</span>}
               </div>
               <div className={`grid gap-3 mb-4 ${runCost ? 'grid-cols-7' : 'grid-cols-6'}`}>
-                <StatCard value={`${(activeRun.final_score||0).toFixed(1)}%`} label="Score"/><StatCard value={passed} label="Passed" color="text-emerald-400"/><StatCard value={failed} label="Failed" color="text-red-400"/><StatCard value={running} label="Running" color="text-amber-400"/><StatCard value={sortedTasks.length} label="Total" color="text-slate-300"/><StatCard value={activeRun.wall_time_ms>0?`${(activeRun.wall_time_ms/1000).toFixed(0)}s`:activeRun.status==='running'?'...':'--'} label="Wall Time" color="text-slate-300"/>
+                {blind
+                  ? <><StatCard value={passed} label="Done" color="text-slate-300"/><StatCard value={running} label="Running" color="text-amber-400"/><StatCard value={sortedTasks.length} label="Total" color="text-slate-300"/><StatCard value={activeRun.wall_time_ms>0?`${(activeRun.wall_time_ms/1000).toFixed(0)}s`:activeRun.status==='running'?'...':'--'} label="Wall Time" color="text-slate-300"/></>
+                  : <><StatCard value={`${(activeRun.final_score||0).toFixed(1)}%`} label="Score"/><StatCard value={passed} label="Passed" color="text-emerald-400"/><StatCard value={failed} label="Failed" color="text-red-400"/><StatCard value={running} label="Running" color="text-amber-400"/><StatCard value={sortedTasks.length} label="Total" color="text-slate-300"/><StatCard value={activeRun.wall_time_ms>0?`${(activeRun.wall_time_ms/1000).toFixed(0)}s`:activeRun.status==='running'?'...':'--'} label="Wall Time" color="text-slate-300"/></>
+                }
                 {runCost && <StatCard value={`$${runCost.cost < 0.01 ? runCost.cost.toFixed(4) : runCost.cost.toFixed(2)}`} label="Cost" color="text-green-400"/>}
               </div>
               <div className="mb-5"><ProgressBar passed={passed} failed={failed} total={sortedTasks.length}/></div>
               <div className="bg-slate-900/50 rounded-xl border border-slate-800/50 overflow-hidden">
                 <div className="grid grid-cols-[32px_52px_1fr_110px_60px_60px_64px_64px] gap-2 px-4 py-2 bg-slate-800/30 text-[10px] text-slate-600 uppercase tracking-wider"><span/><span>ID</span><span>Task</span><span>Skill</span><span>Score</span><span>Tools</span><span className="text-right">Tokens</span><span className="text-right">Time</span></div>
-                {sortedTasks.map(task=>(<div key={task.task_id}><TaskRow task={task} isExpanded={expandedTask===task.task_id} onToggle={()=>setExpandedTask(expandedTask===task.task_id?null:task.task_id)}/>{expandedTask===task.task_id&&<TaskPanel task={task} events={events} runId={activeRunId}/>}</div>))}
+                {sortedTasks.map(task=>(<div key={task.task_id}><TaskRow task={task} blind={blind} isExpanded={expandedTask===task.task_id} onToggle={()=>setExpandedTask(expandedTask===task.task_id?null:task.task_id)}/>{expandedTask===task.task_id&&<TaskPanel task={task} events={events} runId={activeRunId}/>}</div>))}
               </div>
             </>
           )}

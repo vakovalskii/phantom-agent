@@ -40,8 +40,16 @@ _INBOX_PATTERNS = [
         r"handle\s+(the\s+)?(next\s+)?(inbox|inbound|incoming\s+queue)",
         r"take\s+care\s+of\s+(the\s+)?(next\s+)?(message\s+in\s+)?(inbox|pending\s+inbox|incoming\s+queue|inbox\s+queue|inbound)",
         r"review\s+(the\s+)?(next\s+)?(inbox|inbound|incoming\s+queue)",
-        r"work\s+through\s+(the\s+)?(next\s+)?(inbox|inbound|incoming\s+queue)",
+        r"work\s+(through\s+)?(the\s+)?(next\s+)?(oldest\s+)?(inbox|inbound|incoming\s+queue)",
         r"triage\s+(the\s+)?(inbox|queue|incoming\s+queue)",
+        # Multilingual inbox patterns
+        r"traite[rz]?\s+(le\s+)?prochain",  # French
+        r"处理收件箱",  # Chinese
+        r"قم بمعالجة",  # Arabic
+        r"обработай\s+следующее",  # Russian
+        r"enc[aá]rgate\s+del\s+siguiente",  # Spanish
+        r"work\s+the\s+oldest\s+inbox",
+        r"next\s+inbound\s+note",
     ]
 ]
 
@@ -51,6 +59,7 @@ _EMAIL_PATTERNS = [
         r"email\s+(reminder\s+)?to\s+",
         r"email\s+to\s+",
         r"reply\s+(by|via)\s+email",
+        r"email\s+\w+\s+a\s+",  # "email Priya a one-paragraph..."
     ]
 ]
 
@@ -62,6 +71,38 @@ _LOOKUP_PATTERNS = [
         r"how\s+many\s+accounts?\s+",
         r"what\s+is\s+the\s+exact\s+legal\s+name",
         r"answer\s+(only\s+)?with\s+the\s+(number|email|name)",
+        # Entity/person lookups
+        r"birthday",
+        r"\bDoB\b",
+        r"born\s+on",
+        r"quote\s+me\s+the\s+last\s+(recorded\s+)?message",
+        r"return\s+only\s+the\s+exact\s+message\s+text",
+        r"in\s+which\s+projects?\s+is",
+        r"how\s+many\s+.+projects?\s+involve",
+        r"what\s+is\s+the\s+start\s+date\s+of",
+        r"who\s+has\s+the\s+next\s+(upcoming\s+)?birthday",
+        r"find\s+the\s+next\s+birthday",
+        r"whose\s+birthday\s+is\s+coming",
+        r"when\s+was\s+.+born",
+        r"partner.+born",
+        r"friend.+born",
+    ]
+]
+
+_FINANCE_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r"how\s+much\s+did\s+.+charge",
+        r"how\s+much\s+money\s+did\s+(we|i)\s+(make|pay|earn|spend)",
+        r"how\s+much\s+did\s+(I|we)\s+pay",
+        r"combien\s+d.argent",  # French
+        r"wie\s+viel\s+geld",  # German
+        r"كم\s+من\s+المال",  # Arabic
+        r"total\s+(amount|cost|paid|revenue|earned)",
+        r"number\s+of\s+lines.+bill",
+        r"purchased\s+date.+bill",
+        r"looking\s+at\s+the\s+bill",
+        r"what\s+is\s+the\s+(purchased|issued)\s+date",
+        r"what\s+is\s+the\s+(number|quantity)\s+of.+(bill|invoice|receipt)",
     ]
 ]
 
@@ -93,6 +134,8 @@ _CLEANUP_PATTERNS = [
         r"discard\s+thread",
         r"start\s+over.+remove",
         r"clear\s+(all\s+)?(cards|threads)",
+        r"find\s+(every|all)\s+receipt.+delete",
+        r"delete\s+(all\s+)?(receipts|files)\s+(containing|that\s+include)",
     ]
 ]
 
@@ -121,6 +164,16 @@ _PURCHASE_PATTERNS = [
         r"purchase\s+id\s+prefix",
         r"prefix\s+regression",
         r"downstream\s+processing",
+    ]
+]
+
+_MIGRATION_PATTERNS = [
+    re.compile(p, re.IGNORECASE) for p in [
+        r"queue\s+up\s+.+for\s+migration",
+        r"mark.+for\s+(later\s+)?migration",
+        r"migrate\s+.+to\s+(my\s+)?NORA",
+        r"OCR\s+.+extract\s+.+frontmatter",
+        r"OCR\s+(these|this)",
     ]
 ]
 
@@ -173,7 +226,11 @@ def classify_task(task_text: str) -> SkillMatch:
     if _match_any(text, _KNOWLEDGE_LOOKUP_PATTERNS):
         return SkillMatch("knowledge_lookup", 0.85)
 
-    # 6. CRM tasks
+    # 7. Finance queries (before general lookup)
+    if _match_any(text, _FINANCE_PATTERNS):
+        return SkillMatch("crm_lookup", 0.85)
+
+    # 8. CRM/entity tasks
     if _match_any(text, _INVOICE_PATTERNS):
         return SkillMatch("invoice_creation", 0.90)
     if _match_any(text, _FOLLOWUP_PATTERNS):
@@ -181,15 +238,19 @@ def classify_task(task_text: str) -> SkillMatch:
     if _match_any(text, _PURCHASE_PATTERNS):
         return SkillMatch("purchase_ops", 0.90)
 
-    # 7. Email outbound (inbox already handled above)
+    # 9. Document migration
+    if _match_any(text, _MIGRATION_PATTERNS):
+        return SkillMatch("inbox_processing", 0.85)
+
+    # 10. Email outbound
     if _match_any(text, _EMAIL_PATTERNS):
         return SkillMatch("email_outbound", 0.85)
 
-    # 9. CRM lookup
+    # 11. General lookups (entity, project, finance)
     if _match_any(text, _LOOKUP_PATTERNS):
         return SkillMatch("crm_lookup", 0.85)
 
-    # 10. Fallback — try to infer from keywords
+    # 12. Fallback — try to infer from keywords
     if any(w in lowered for w in ["email", "send", "write"]) and "outbox" not in lowered:
         if any(w in lowered for w in ["address", "what is", "return"]):
             return SkillMatch("crm_lookup", 0.60)
@@ -200,6 +261,12 @@ def classify_task(task_text: str) -> SkillMatch:
 
     if any(w in lowered for w in ["capture", "distill", "snippet"]):
         return SkillMatch("knowledge_capture", 0.60)
+
+    if any(w in lowered for w in ["birthday", "project", "invoice", "bill", "receipt", "charge", "paid", "revenue"]):
+        return SkillMatch("crm_lookup", 0.60)
+
+    if any(w in lowered for w in ["delete", "find every", "find all"]):
+        return SkillMatch("knowledge_cleanup", 0.60)
 
     # No confident match — no skill injection, agent uses base prompt
     return SkillMatch("", 0.0)

@@ -2,11 +2,12 @@
 .envrc
 .env
 .idea/
-benchmark-runs/
+benchmark-runs/pac1.db
+benchmark-runs/pac1.db-shm
+benchmark-runs/pac1.db-wal
 .venv/
 __pycache__/
 *.pyc
 *.egg-info/
 node_modules/
 dist/
-*.db

@@ -2,42 +2,25 @@
 This task asks you to send an email.
 
 WORKFLOW:
-1. Resolve the recipient:
-   - If direct email given (e.g. "alex@example.com") → use it directly
-   - If name given (e.g. "Alex Meyer") → search /contacts/ JSON files for full_name match
-   - If account given (e.g. "Aperture AI Labs") → search /accounts/ for the account,
-     find primary_contact or contact_id, then look up their email in /contacts/
-   - If descriptive (e.g. "Dutch banking customer") → iterate /accounts/, match by
-     country, industry, description fields
+1. Orient: list_directory_tree "/" and read /AGENTS.md to learn workspace structure
+2. Resolve the recipient:
+   - If direct email given → use it directly
+   - If name given → search entity files (10_entities/cast/ or /contacts/) for name match, get primary_contact_email
+   - If account/project given → search projects or entities for the match, find contact
+   - If descriptive → iterate entity/account files, match by relationship, description fields
 
-2. Check workspace has /outbox/ — if not, OUTCOME_NONE_UNSUPPORTED
-
-3. Read /outbox/seq.json to get the current sequence number
-
-4. Create email JSON in /outbox/{next_seq}.json:
-   {
-     "id": <next_seq>,
-     "to": "<resolved_email>",
-     "subject": "<from task>",
-     "body": "<from task>"
-   }
-
-5. Update /outbox/seq.json to {"id": next_seq + 1}
-
-6. Verify by reading the created file back — must be valid JSON
-
-CRITICAL: Read /outbox/README.MD first for exact format. Write EXACTLY ONCE. Filename = seq.json id value.
-Email format: {"subject": "...", "to": "email", "body": "...", "sent": false}
-Add "attachments": ["path"] if needed.
-
-7. submit_answer with:
-   - grounding_refs: ["/outbox/{id}.json", "/outbox/seq.json", contact_or_account_path]
+3. Find the outbox folder (60_outbox/, /outbox/, etc.) — read its AGENTS.MD or README.MD for format
+4. Read seq.json to get the current sequence number
+5. Create email file in outbox following the format rules
+6. Update seq.json
+7. Verify by reading the created file back
 
 CONTACT RESOLUTION STRATEGY:
-- By name → search_text in /contacts/ for full_name match
-- By account name → search_text in /accounts/ for name match, then find primary_contact
-- By description (e.g. "Dutch banking customer", "Austrian energy") → read ALL /accounts/*.json files, match by country, industry, segment, description fields. Do NOT give up after one search — iterate all account files if needed.
-- NEVER clarify if you haven't read all account files yet. Exhaust the search first.
+- Entity files in 10_entities/cast/ contain: alias, kind, relationship, primary_contact_email, birthday
+- Search by name, alias, or relationship
+- NEVER clarify if you haven't searched all entity files yet. Exhaust the search first.
 
-If contact/account truly cannot be resolved after checking ALL files → OUTCOME_NONE_CLARIFICATION
+If contact truly cannot be resolved after checking ALL files → OUTCOME_NONE_CLARIFICATION
+
+submit_answer with grounding_refs including outbox files, entity files, and any other files read.
 </SKILL_EMAIL_OUTBOUND>

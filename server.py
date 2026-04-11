@@ -73,6 +73,7 @@ class BenchmarkRun:
     finished_at: float = 0.0
     temperature: float = 1.0
     model: str = ""
+    _submitted: bool = False
 
 
 _runs: dict[str, BenchmarkRun] = {}
@@ -267,6 +268,7 @@ async def _run_benchmark_async(run_id: str, task_filter: list[str] | None = None
                 ),
             )
             run.leaderboard_run_id = run_response.run_id
+            store.update_run(run_id, leaderboard_run_id=run_response.run_id)
             trial_ids = list(run_response.trial_ids)
             all_tasks = list(res.tasks)
             tasks = [(all_tasks[i].task_id, trial_ids[i]) for i in range(len(all_tasks))]
@@ -313,6 +315,10 @@ async def _run_benchmark_async(run_id: str, task_filter: list[str] | None = None
             await asyncio.to_thread(
                 harness.submit_run, SubmitRunRequest(run_id=run.leaderboard_run_id)
             )
+            run._submitted = True
+            emitter("run_submitted", {"leaderboard_run_id": run.leaderboard_run_id})
+        elif not auto_submit:
+            emitter("run_skip_submit", {"reason": "auto_submit disabled"})
 
         store.update_run(run_id, status="done", final_score=run.final_score, finished_at=run.finished_at)
 
@@ -362,6 +368,8 @@ def _run_to_dict(run: BenchmarkRun) -> dict:
         "started_at": run.started_at,
         "temperature": getattr(run, 'temperature', 1.0),
         "model": getattr(run, 'model', ''),
+        "submitted": bool(getattr(run, '_submitted', False)),
+        "leaderboard_run_id": getattr(run, 'leaderboard_run_id', None),
     }
 
 
@@ -385,6 +393,7 @@ async def _startup():
         run.finished_at = rd.get("finished_at", 0) or time.time()
         run.temperature = rd.get("temperature", 1.0)
         run.model = rd.get("model", "")
+        run.leaderboard_run_id = rd.get("leaderboard_run_id")
         for tid, td in rd.get("tasks", {}).items():
             run.tasks[tid] = TaskResult(
                 task_id=td["task_id"],
@@ -458,6 +467,26 @@ async def set_llm_config(body: dict):
         "openai_api_key": _cfg.openai_api_key,
         "bitgn_api_key": _cfg.bitgn_api_key or "",
     }
+
+
+@app.put("/api/config/benchmark")
+async def set_benchmark(body: dict):
+    global _cfg
+    old = _get_cfg()
+    bid = body.get("benchmark_id", old.benchmark_id)
+    _cfg = Config(
+        model=old.model,
+        openai_api_key=old.openai_api_key,
+        openai_base_url=old.openai_base_url,
+        bitgn_api_key=old.bitgn_api_key,
+        benchmark_host=old.benchmark_host,
+        benchmark_id=bid,
+        run_name=old.run_name,
+        max_turns=old.max_turns,
+        concurrency=old.concurrency,
+        request_timeout=old.request_timeout,
+    )
+    return {"benchmark_id": _cfg.benchmark_id}
 
 
 @app.get("/api/skills")
@@ -584,6 +613,7 @@ async def submit_run_to_leaderboard(run_id: str):
         await asyncio.to_thread(
             harness.submit_run, SubmitRunRequest(run_id=run.leaderboard_run_id)
         )
+        run._submitted = True
         return {"submitted": run_id, "leaderboard_run_id": run.leaderboard_run_id, "score": run.final_score}
     except Exception as exc:
         return {"error": str(exc)[:300]}
