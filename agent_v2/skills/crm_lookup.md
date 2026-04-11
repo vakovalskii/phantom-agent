@@ -32,6 +32,12 @@ FINANCE QUERIES — "how much did X charge in total":
 - SUM the line_eur values across ALL matching bills
 - "How much did I pay to X in total?" → sum total_eur from ALL bills with that counterparty
 
+BILL LINE ITEMS:
+- "number of lines" in a bill context = number of LINE ITEMS in the Line Items table, NOT the number of lines in the file
+- "price of X" = the line_eur value for that specific item in the Line Items table
+- Read the bill file, find the Line Items table, count the data rows (exclude header and TOTAL rows)
+- Each row in the Line Items table between the header and TOTAL is one line item
+
 COUNTING RULES (for "how many" questions):
 - Use search_text to find all matches across relevant folders
 - ALWAYS set limit=2000 to get all results
