@@ -126,6 +126,10 @@ async def write_file(
     ctx.context.telemetry.tool_calls += 1
     if path not in ctx.context.files_written:
         ctx.context.files_written.append(path)
+    # Strip trailing newline to avoid +1 byte body mismatch
+    # Only for full-file writes, not line-range edits
+    if start_line == 0 and end_line == 0 and content.endswith('\n'):
+        content = content[:-1]
     return await ctx.context.runtime.write_file(path, content, start_line, end_line)
 
 
@@ -189,6 +193,12 @@ async def submit_answer(
     """
     ctx.context.telemetry.tool_calls += 1
     ctx.context.completion_submitted = True
+
+    # Strip leading/trailing whitespace from message
+    message = message.strip()
+    # Fix paths in message: strip leading "/" from file paths (expected without root prefix)
+    if message and '\n' in message and all(line.strip().startswith('/') for line in message.strip().split('\n') if line.strip()):
+        message = '\n'.join(line.strip().lstrip('/') for line in message.strip().split('\n'))
 
     # Auto-merge: add files the model read/wrote but forgot to include in refs
     skip = {'README.MD', 'README.md', 'AGENTS.md', 'AGENTS.MD'}

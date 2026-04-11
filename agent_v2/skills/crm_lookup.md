@@ -18,11 +18,28 @@ SEARCH STRATEGY:
 - Name matching is case-insensitive, try BOTH "First Last" and "Last" orderings
 - NEVER guess — always verify by reading the actual file
 
+ALIAS RESOLUTION — when the task uses informal/indirect references instead of exact names:
+- Read ALL entity files to understand relationships, kinds, aliases, and roles
+- Match by relationship field (e.g. "wife", "consulting_client", "co-founder"), kind field (e.g. "system", "person", "pet"), or description
+- For comparative references ("older one", "younger one") — compare relevant fields (birthdays, dates) across entities
+- For role-based references ("the founder", "ops lead") — search relationship and description fields
+- For system/object references ("the printer", "house AI") — search kind and alias fields
+- Do NOT clarify if you can resolve the reference by reading entities — exhaust all files first
+
+FINANCE QUERIES — "how much did X charge in total":
+- Find ALL purchases from that counterparty (search_text for counterparty name in 50_finance/)
+- Read each matching bill, find the requested line item
+- SUM the line_eur values across ALL matching bills
+- "How much did I pay to X in total?" → sum total_eur from ALL bills with that counterparty
+
 COUNTING RULES (for "how many" questions):
 - Use search_text to find all matches across relevant folders
 - ALWAYS set limit=2000 to get all results
 - Count the results carefully
 - Do NOT count mentally from reading — use search_text
+- If you searched exhaustively and found ZERO matches → the answer is "0" with OUTCOME_OK
+- NEVER clarify just because the count is zero — "0" IS a valid answer
+- For "how many X projects involve Y": search ALL project READMEs for Y, count matches. No matches = "0"
 
 FORMAT RULES:
 - "Return only the email/date/number" → message = ONLY the raw value, nothing else

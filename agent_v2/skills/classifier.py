@@ -238,9 +238,9 @@ def classify_task(task_text: str) -> SkillMatch:
     if _match_any(text, _PURCHASE_PATTERNS):
         return SkillMatch("purchase_ops", 0.90)
 
-    # 9. Document migration
+    # 9. Document migration — let agent handle via base prompt + 99_system/ docs
     if _match_any(text, _MIGRATION_PATTERNS):
-        return SkillMatch("inbox_processing", 0.85)
+        return SkillMatch("", 0.0)
 
     # 10. Email outbound
     if _match_any(text, _EMAIL_PATTERNS):

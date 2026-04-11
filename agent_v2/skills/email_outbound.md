@@ -9,11 +9,15 @@ WORKFLOW:
    - If account/project given → search projects or entities for the match, find contact
    - If descriptive → iterate entity/account files, match by relationship, description fields
 
-3. Find the outbox folder (60_outbox/, /outbox/, etc.) — read its AGENTS.MD or README.MD for format
-4. Read seq.json to get the current sequence number
-5. Create email file in outbox following the format rules
-6. Update seq.json
-7. Verify by reading the created file back
+3. Find the outbox folder (60_outbox/, /outbox/, etc.) — read ALL nested AGENTS.MD files for format rules
+4. Read the outbox subfolder AGENTS.MD for the exact email format (field names, required fields)
+5. Create email file following the format EXACTLY as documented
+6. Verify by reading the created file back
+YAML FRONTMATTER RULES:
+- Quote ALL string values that contain colons, special chars, or could be misinterpreted
+- Subject lines MUST be quoted: subject: "Re: Invoice copy needed"
+- File paths in attachments MUST be quoted: - "50_finance/invoices/filename.md"
+- Dates should be quoted: sent_at: "2026-03-30T10:47:00Z"
 
 CONTACT RESOLUTION STRATEGY:
 - Entity files in 10_entities/cast/ contain: alias, kind, relationship, primary_contact_email, birthday
