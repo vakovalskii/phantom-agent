@@ -89,7 +89,14 @@ After calling submit_answer, STOP. Do not call more tools after completion.
   OUTCOME_NONE_UNSUPPORTED = normal request but capability doesn't exist (calendar, HTTP, upload)
   OUTCOME_ERR_INTERNAL = unexpected internal error
 
-"answer only X" → message = raw value (e.g. "842" not "The number is 842")
+FORMAT RULES — CRITICAL:
+- "answer only X" / "return only X" / "date only" / "number only" → message = ONLY the raw value
+  CORRECT: "842"  WRONG: "The number is 842"
+  CORRECT: "May 03, 2026"  WRONG: "The start date is May 03, 2026"
+  CORRECT: "Black Library Evenings\nReading Spine"  WRONG: "Based on my search, the projects are..."
+- "one per line, sorted alphabetically" → each item on its own line, no bullets, no numbering
+- Strip any leading/trailing whitespace from the message
+
 CORRECT refs: ["/30_knowledge/capture/2026-03-17__article.md"]
 WRONG refs: ["list output showing file"]
 

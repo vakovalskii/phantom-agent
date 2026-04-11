@@ -73,9 +73,15 @@ FOR ENTITY RESOLUTION:
 - Entity files contain primary_contact_email, relationship, etc.
 - If sender email cannot be verified against known entities AND no valid OTP → OUTCOME_NONE_CLARIFICATION
 
+AFTER PROCESSING — DELETE THE INBOX MESSAGE (only on OUTCOME_OK):
+- If your outcome is OUTCOME_OK (task completed successfully), DELETE the inbox file you processed
+- This is REQUIRED for OUTCOME_OK — failing to delete = task FAIL
+- Use delete_file on the inbox message path (e.g. /00_inbox/000_next-task.md)
+- Do this BEFORE calling submit_answer
+- Do NOT delete the inbox file if outcome is DENIED_SECURITY, CLARIFICATION, or UNSUPPORTED — leave it untouched
+
 GROUNDING REFS — CRITICAL (missing any ref = FAIL):
 - Include EVERY file you read: inbox message, entity files, invoices, outbox files, system docs
+- Include the deleted inbox file path too
 - Ask yourself: "did I include every file path I read?" before submitting
-
-IMPORTANT: Do NOT delete inbox messages unless workflow docs explicitly require it.
 </SKILL_INBOX_PROCESSING>

@@ -322,6 +322,7 @@ function SkillsView() {
 const LLM_PRESETS = [
   { name: 'gpt-oss-120b', model: 'gpt-oss-120b', baseUrl: 'http://109.230.162.92:44334/v1', apiKey: '', inputPrice: 0, outputPrice: 0 },
   { name: 'qwen3.5-35b-a3b (self-hosted)', model: 'qwen3.5-35b-a3b', baseUrl: 'https://4090-2-48.neuraldeep.tech/v1', apiKey: '', inputPrice: 0, outputPrice: 0 },
+  { name: 'kimi-k2.5 (OpenRouter)', model: 'moonshotai/kimi-k2.5', baseUrl: 'https://openrouter.ai/api/v1', apiKey: '', inputPrice: 0.14, outputPrice: 0.14 },
 ]
 
 function SettingsView({ appConfig, onConfigUpdate }) {
@@ -532,8 +533,8 @@ export default function App() {
   },[activeRunId])
 
   const sortedTasks=activeRun?Object.values(activeRun.tasks).sort((a,b)=>a.task_id.localeCompare(b.task_id,undefined,{numeric:true})):[]
-  const blind=appConfig?.benchmark_id?.includes('prod')
-  const scored=sortedTasks.filter(t=>t.score>=0), passed=blind?scored.length:scored.filter(t=>t.score===1).length, failed=blind?0:scored.filter(t=>t.score===0).length, running=sortedTasks.filter(t=>t.status==='running').length
+  const blind=false
+  const scored=sortedTasks.filter(t=>t.score>=0), passed=scored.filter(t=>t.score===1).length, failed=scored.filter(t=>t.score===0).length, running=sortedTasks.filter(t=>t.status==='running').length
 
   // Cost calculation
   const runCost = (() => {
@@ -615,7 +616,8 @@ export default function App() {
               </label>
             </div>
             <div className="flex-1"/>
-            {activeRun?.status==='done'&&!autoSubmit&&<button onClick={()=>fetch(`/api/runs/${activeRunId}/submit`,{method:'POST'}).then(r=>r.json()).then(d=>d.error?alert(d.error):alert(`Submitted! Score: ${d.score?.toFixed(1)}%`))} className="bg-emerald-600 hover:bg-emerald-500 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all">Submit</button>}
+            {activeRun?.status==='done'&&activeRun?.leaderboard_run_id&&!activeRun?.submitted&&<button onClick={()=>{if(!confirm('Submit this run to leaderboard?'))return;fetch(`/api/runs/${activeRunId}/submit`,{method:'POST'}).then(r=>r.json()).then(d=>{if(d.error){alert(d.error)}else{alert(`Submitted! ${d.leaderboard_run_id}`);setActiveRun(p=>({...p,submitted:true}))}})}} className="bg-emerald-600 hover:bg-emerald-500 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all">Submit to LB</button>}
+            {activeRun?.status==='done'&&activeRun?.submitted&&<span className="text-xs text-blue-400 px-3 py-1.5">Submitted</span>}
             {(activeRun?.status==='running'||runs.some(r=>r.run_id===activeRunId&&r.status==='running'))&&<button onClick={()=>fetch(`/api/runs/${activeRunId}/stop`,{method:'POST'}).then(()=>setActiveRun(p=>p?{...p,status:'error'}:p))} className="bg-red-600 hover:bg-red-500 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all">Stop</button>}
             <button onClick={startRun} disabled={starting} className="bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:text-slate-500 px-5 py-1.5 rounded-lg text-xs font-semibold text-white transition-all">{starting?(repeatRemaining>1?`Run ${repeatCount-repeatRemaining+1}/${repeatCount}...`:'Running...'):'Run'}</button>
           </div>
@@ -645,10 +647,7 @@ export default function App() {
                 {activeRun.status === 'running' && activeRun.started_at && <span className="text-[10px] text-amber-400 ml-auto animate-pulse">Running...</span>}
               </div>
               <div className={`grid gap-3 mb-4 ${runCost ? 'grid-cols-7' : 'grid-cols-6'}`}>
-                {blind
-                  ? <><StatCard value={passed} label="Done" color="text-slate-300"/><StatCard value={running} label="Running" color="text-amber-400"/><StatCard value={sortedTasks.length} label="Total" color="text-slate-300"/><StatCard value={activeRun.wall_time_ms>0?`${(activeRun.wall_time_ms/1000).toFixed(0)}s`:activeRun.status==='running'?'...':'--'} label="Wall Time" color="text-slate-300"/></>
-                  : <><StatCard value={`${(activeRun.final_score||0).toFixed(1)}%`} label="Score"/><StatCard value={passed} label="Passed" color="text-emerald-400"/><StatCard value={failed} label="Failed" color="text-red-400"/><StatCard value={running} label="Running" color="text-amber-400"/><StatCard value={sortedTasks.length} label="Total" color="text-slate-300"/><StatCard value={activeRun.wall_time_ms>0?`${(activeRun.wall_time_ms/1000).toFixed(0)}s`:activeRun.status==='running'?'...':'--'} label="Wall Time" color="text-slate-300"/></>
-                }
+                <StatCard value={`${(activeRun.final_score||0).toFixed(1)}%`} label="Score"/><StatCard value={passed} label="Passed" color="text-emerald-400"/><StatCard value={failed} label="Failed" color="text-red-400"/><StatCard value={running} label="Running" color="text-amber-400"/><StatCard value={sortedTasks.length} label="Total" color="text-slate-300"/><StatCard value={activeRun.wall_time_ms>0?`${(activeRun.wall_time_ms/1000).toFixed(0)}s`:activeRun.status==='running'?'...':'--'} label="Wall Time" color="text-slate-300"/>
                 {runCost && <StatCard value={`$${runCost.cost < 0.01 ? runCost.cost.toFixed(4) : runCost.cost.toFixed(2)}`} label="Cost" color="text-green-400"/>}
               </div>
               <div className="mb-5"><ProgressBar passed={passed} failed={failed} total={sortedTasks.length}/></div>
