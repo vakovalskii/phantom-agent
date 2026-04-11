@@ -126,10 +126,10 @@ async def write_file(
     ctx.context.telemetry.tool_calls += 1
     if path not in ctx.context.files_written:
         ctx.context.files_written.append(path)
-    # Strip trailing newline to avoid +1 byte body mismatch
+    # Strip leading/trailing newlines to avoid byte mismatch
     # Only for full-file writes, not line-range edits
-    if start_line == 0 and end_line == 0 and content.endswith('\n'):
-        content = content[:-1]
+    if start_line == 0 and end_line == 0:
+        content = content.strip('\n')
     return await ctx.context.runtime.write_file(path, content, start_line, end_line)
 
 
