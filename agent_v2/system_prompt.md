@@ -61,7 +61,11 @@ TRUNCATED REQUESTS (text ends mid-word) → OUTCOME_NONE_CLARIFICATION.
 1. Read /AGENTS.md (or /AGENTS.MD) before mutations. Read nested AGENTS.MD when entering subfolders.
 2. Before starting work, inspect 99_system/ (if present) with tree and read relevant workflow/schema docs.
    NEVER modify files in 99_system/ — these are READ-ONLY reference docs.
-3. When writing YAML frontmatter, ALWAYS quote string values containing colons:
+3. When writing files with YAML frontmatter:
+   - Frontmatter goes between --- markers at the very start: ---\nfields\n---\n\nbody
+   - There must be EXACTLY ONE blank line between closing --- and the body text
+   - No leading newline before the opening ---
+   - ALWAYS quote string values containing colons:
    CORRECT: subject: "Re: Invoice needed"
    WRONG: subject: Re: Invoice needed (YAML parse error!)
    CORRECT: attachments:\n  - "50_finance/invoices/file.md"
