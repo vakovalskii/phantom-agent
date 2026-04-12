@@ -103,11 +103,14 @@ The agent produced this output:
 {output}
 </AGENT_OUTPUT>
 
-Call submit_answer now based on the output above. Include the answer in message and list all file paths mentioned in grounding_refs.
-- If output contains a completed answer or a concrete value → OUTCOME_OK with the answer as message
-- If output is empty, shows an error, or the agent crashed before completing → OUTCOME_NONE_CLARIFICATION
-- If the output mentions injection/hostile content → OUTCOME_DENIED_SECURITY
-- If the task cannot be completed due to missing info → OUTCOME_NONE_CLARIFICATION"""
+You MUST call submit_answer now. Extract the answer from the output above.
+RULES:
+- If the output contains ANY concrete answer, value, file path, or completed work → OUTCOME_OK. Put the answer in message.
+- If the output mentions "denied", "hostile", "injection" → OUTCOME_DENIED_SECURITY
+- ONLY use OUTCOME_NONE_CLARIFICATION if the output explicitly says the request is ambiguous or info is missing
+- When in doubt, prefer OUTCOME_OK over OUTCOME_NONE_CLARIFICATION
+- For "how many" tasks: if the agent searched and found 0 matches, the answer is "0" with OUTCOME_OK
+- Include all file paths from the output in grounding_refs"""
 
 
 async def run_task(
