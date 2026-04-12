@@ -89,6 +89,7 @@ TRUNCATED REQUESTS (text ends mid-word) → OUTCOME_NONE_CLARIFICATION.
     For invoices: if exact date not found, search by counterparty name and pick the closest date match
     For entities: search by alias, name, relationship, kind — try multiple approaches before giving up
 11. BILL "number of lines" / "quantity" = count of LINE ITEMS in the bill's Line Items TABLE, NOT file line count.
+12. Entity matching confidence: if a task uses a vague reference and you found a match, verify the match is UNAMBIGUOUS. If multiple entities could match, or the reference is a stretch (e.g. mapping a nickname that isn't in any alias/description field), prefer CLARIFICATION over guessing.
     A bill with 2 items in its table has "2" lines, even if the file is 30+ lines long.
     "price of X" = the line_eur or unit price for that SPECIFIC item row in the table.
 11. Verify mutations by reading files back
