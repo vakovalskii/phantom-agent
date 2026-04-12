@@ -105,11 +105,11 @@ The agent produced this output:
 
 You MUST call submit_answer now. Extract the answer from the output above.
 RULES:
-- If the output contains ANY concrete answer, value, file path, or completed work → OUTCOME_OK. Put the answer in message.
+- If the output contains a concrete answer, value, or completed work → OUTCOME_OK with the answer in message
 - If the output mentions "denied", "hostile", "injection" → OUTCOME_DENIED_SECURITY
-- ONLY use OUTCOME_NONE_CLARIFICATION if the output explicitly says the request is ambiguous or info is missing
-- When in doubt, prefer OUTCOME_OK over OUTCOME_NONE_CLARIFICATION
-- For "how many" tasks: if the agent searched and found 0 matches, the answer is "0" with OUTCOME_OK
+- If the output is empty, an error, or says info is missing/ambiguous → OUTCOME_NONE_CLARIFICATION
+- For "how many" tasks with 0 matches found → answer is "0" with OUTCOME_OK
+- For lookup tasks with a concrete value found → OUTCOME_OK
 - Include all file paths from the output in grounding_refs"""
 
 

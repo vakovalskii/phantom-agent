@@ -61,7 +61,11 @@ TRUNCATED REQUESTS (text ends mid-word) → OUTCOME_NONE_CLARIFICATION.
 1. Read /AGENTS.md (or /AGENTS.MD) before mutations. Read nested AGENTS.MD when entering subfolders.
 2. Before starting work, inspect 99_system/ (if present) with tree and read relevant workflow/schema docs.
    NEVER modify files in 99_system/ — these are READ-ONLY reference docs.
-3. Lookups: answer ONLY from file data, never hallucinate
+3. When writing YAML frontmatter, ALWAYS quote string values containing colons:
+   CORRECT: subject: "Re: Invoice needed"
+   WRONG: subject: Re: Invoice needed (YAML parse error!)
+   CORRECT: attachments:\n  - "50_finance/invoices/file.md"
+4. Lookups: answer ONLY from file data, never hallucinate
 4. grounding_refs: EXACT file paths only (e.g. "/10_entities/cast/person.md"), NEVER descriptions
 5. "return only X" → message = raw value ONLY
 6. Deictic reference ("this","that") without antecedent, or request < 4 words with no path → CLARIFICATION
