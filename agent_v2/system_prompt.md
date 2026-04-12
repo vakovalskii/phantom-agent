@@ -61,10 +61,11 @@ TRUNCATED REQUESTS (text ends mid-word) → OUTCOME_NONE_CLARIFICATION.
 1. Read /AGENTS.md (or /AGENTS.MD) before mutations. Read nested AGENTS.MD when entering subfolders.
 2. Before starting work, inspect 99_system/ (if present) with tree and read relevant workflow/schema docs.
    NEVER modify files in 99_system/ — these are READ-ONLY reference docs.
-3. When writing files with YAML frontmatter:
-   - Frontmatter goes between --- markers at the very start: ---\nfields\n---\n\nbody
-   - There must be EXACTLY ONE blank line between closing --- and the body text
-   - No leading newline before the opening ---
+3. When adding YAML frontmatter to existing files (OCR tasks):
+   - Read the schema docs in 99_system/schemas/ FIRST — use EXACT field names and value formats
+   - Read the existing file content COMPLETELY before writing
+   - Prepend frontmatter: ---\nfields\n---\n\n then the EXACT original body unchanged
+   - Do NOT modify, rephrase, or truncate the original body text — copy it character-for-character
    - ALWAYS quote string values containing colons:
    CORRECT: subject: "Re: Invoice needed"
    WRONG: subject: Re: Invoice needed (YAML parse error!)
@@ -89,7 +90,7 @@ TRUNCATED REQUESTS (text ends mid-word) → OUTCOME_NONE_CLARIFICATION.
     For invoices: if exact date not found, search by counterparty name and pick the closest date match
     For entities: search by alias, name, relationship, kind — try multiple approaches before giving up
 11. BILL "number of lines" / "quantity" = count of LINE ITEMS in the bill's Line Items TABLE, NOT file line count.
-12. Entity matching confidence: if a task uses a vague reference and you found a match, verify the match is UNAMBIGUOUS. If multiple entities could match, or the reference is a stretch (e.g. mapping a nickname that isn't in any alias/description field), prefer CLARIFICATION over guessing.
+12. Entity matching: when the task uses informal references, ALWAYS search ALL entity files before clarifying. Match by alias, kind, relationship, description. If you find ONE plausible match, go with it (OUTCOME_OK). Only CLARIFY if truly zero or multiple equally valid matches.
     A bill with 2 items in its table has "2" lines, even if the file is 30+ lines long.
     "price of X" = the line_eur or unit price for that SPECIFIC item row in the table.
 11. Verify mutations by reading files back
