@@ -126,12 +126,13 @@ async def write_file(
     ctx.context.telemetry.tool_calls += 1
     if path not in ctx.context.files_written:
         ctx.context.files_written.append(path)
-    # Normalize content to avoid byte mismatch
-    # Remove BOM
-    if content.startswith('\ufeff'):
-        content = content[1:]
-    # Always strip - for ALL writes, regardless of start_line/end_line
-    content = content.strip()
+    # Strip leading/trailing whitespace to avoid byte mismatch
+    # Only for full-file writes, not line-range edits
+    if start_line == 0 and end_line == 0:
+        content = content.strip('\n\r \t')
+        # Remove BOM if present
+        if content.startswith('\ufeff'):
+            content = content[1:]
     return await ctx.context.runtime.write_file(path, content, start_line, end_line)
 
 
